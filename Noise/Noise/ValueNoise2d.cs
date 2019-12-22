@@ -57,7 +57,7 @@ namespace Rk.Noise
             return copy;
         }
 
-        public float[,] ToArray2dClamped(float value)
+        public float[,] ToArray2dClampedTop(float value)
         {
             var copy = new float[Width, Height];
             _values.CopyTo(copy, _values.Length);
@@ -74,6 +74,66 @@ namespace Rk.Noise
             }
 
             return copy;
+        }
+
+        public float[,] ToArray2dClampedBottom(float value)
+        {
+            var copy = new float[Width, Height];
+            _values.CopyTo(copy, _values.Length);
+
+            for (var x = 0; x < Width; x++)
+            {
+                for (var y = 0; y < Height; y++)
+                {
+                    if (copy[x, y] < value)
+                    {
+                        copy[x, y] = value;
+                    }
+                }
+            }
+
+            return copy;
+        }
+
+        public float[,] ToArray2dDiscretized(IDictionary<float, float> targetValueByIntervalUpperBound)
+        {
+            var discretized = new float[Width, Height];
+
+            for (var x = 0; x < Width; x++)
+            {
+                for (var y = 0; y < Height; y++)
+                {
+                    var current = _values[x, y];
+                    var possibleValues = targetValueByIntervalUpperBound
+                        .Where(kvPair => kvPair.Key > current);
+
+                    float value;
+
+                    if (possibleValues.Any())
+                    {
+                        // The lowest interval starts at 0 and goes up to the lowest specified interval
+                        // upper bound, so we take the interval with the lowest upper bound greater
+                        // than the current value.
+                        value = possibleValues
+                            .OrderBy(kvPair => kvPair.Key)
+                            .First()
+                            .Value;
+                    }
+                    else
+                    {
+                        // The value does not lie within any of the specified intervals, so it gets
+                        // assigned to the highest one.
+                        value = targetValueByIntervalUpperBound
+                            .OrderByDescending(kvPair => kvPair.Key)
+                            .First()
+                            .Value;
+                    }
+
+                    discretized[x, y] = value;
+                }
+            }
+
+            return discretized;
         }
 
         /// <summary>
